@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR Pokemon Catcher</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://unpkg.com/vconsole/dist/vconsole.min.js"></script>
+    <script>
+        // Bật vConsole để debug lỗi màn hình trắng
+        var vConsole = new window.VConsole();
+        console.log("Đã khởi động trang web!");
+    </script>
     <style>
         #ui {
             position: absolute;
@@ -12,13 +18,14 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             padding: 10px 20px;
             border-radius: 20px;
             font-family: Arial, sans-serif;
             font-weight: bold;
-            display: none;
+            display: none; /* Sẽ hiện khi vào AR */
             pointer-events: none;
+            text-align: center;
         }
     </style>
 </head>
@@ -26,8 +33,13 @@
 
     <div id="ui">Hãy chĩa camera xuống sàn để tìm vị trí!</div>
 
-    <a-scene webxr="requiredFeatures: hit-test, local-floor;" ar-hit-test="target: #reticle;" renderer="colorManagement: true;">
+    <a-scene 
+        webxr="optionalFeatures: hit-test, local-floor;" 
+        ar-hit-test="target: #reticle;" 
+        renderer="colorManagement: true;">
         
+        <a-sky color="#ECECEC" hide-on-enter-ar></a-sky>
+
         <a-entity camera look-controls>
             <a-entity cursor="rayOrigin: mouse;" raycaster="objects: .pokemon"></a-entity>
         </a-entity>
@@ -40,72 +52,71 @@
     </a-scene>
 
     <script>
-        const sceneEl = document.querySelector('a-scene');
-        const reticle = document.querySelector('#reticle');
-        const ui = document.querySelector('#ui');
-        
-        // Danh sách các Pokemon (Ở đây dùng màu sắc/hình khối làm ví dụ, bạn có thể thay bằng model 3D .gltf)
-        const pokemonTypes = [
-            { name: 'Pikachu', color: '#F4D03F', scale: '0.2 0.2 0.2' },
-            { name: 'Bulbasaur', color: '#27AE60', scale: '0.25 0.2 0.25' },
-            { name: 'Charmander', color: '#E67E22', scale: '0.2 0.25 0.2' }
-        ];
-
-        // Lắng nghe sự kiện khi AR Mode bắt đầu
-        sceneEl.addEventListener('enter-vr', () => {
-            if (sceneEl.is('ar-mode')) {
-                ui.style.display = 'block';
-            }
-        });
-
-        // Xử lý khi chạm vào màn hình
-        window.addEventListener('touchstart', (e) => {
-            // Nếu reticle đang hiển thị (nghĩa là đã tìm thấy mặt phẳng)
-            if (reticle.getAttribute('visible')) {
-                spawnPokemon(reticle.getAttribute('position'));
-            }
-        });
-
-        function spawnPokemon(position) {
-            // Random chọn 1 Pokemon
-            const randomPoke = pokemonTypes[Math.floor(Math.random() * pokemonTypes.length)];
+        // Đảm bảo DOM đã load xong mới chạy code
+        document.addEventListener('DOMContentLoaded', () => {
+            const sceneEl = document.querySelector('a-scene');
+            const reticle = document.querySelector('#reticle');
+            const ui = document.querySelector('#ui');
             
-            // Tạo entity mới (vật thể 3D)
-            const pokemonEl = document.createElement('a-entity');
-            
-            // Gán thuộc tính (dùng hình hộp làm ví dụ. Để đẹp hơn, hãy dùng gltf-model)
-            pokemonEl.setAttribute('geometry', 'primitive: box');
-            pokemonEl.setAttribute('material', `color: ${randomPoke.color}`);
-            pokemonEl.setAttribute('position', position);
-            pokemonEl.setAttribute('scale', randomPoke.scale);
-            pokemonEl.classList.add('pokemon'); // Thêm class để Raycaster nhận diện được
+            console.log("DOM loaded. Chờ A-Frame...");
 
-            // Thêm animation hiện ra cho sinh động
-            pokemonEl.setAttribute('animation', 'property: scale; from: 0 0 0; to: ' + randomPoke.scale + '; dur: 500; easing: easeOutElastic');
+            if (!sceneEl) {
+                console.error("Không tìm thấy thẻ a-scene!");
+                return;
+            }
 
-            // Thêm sự kiện click/chạm vào Pokemon
-            pokemonEl.addEventListener('click', function (evt) {
-                // Hiển thị thông báo
-                alert(`Tuyệt vời! Bạn đã bắt được ${randomPoke.name}! 🔴`);
-                
-                // Xóa Pokemon khỏi scene sau khi bắt
-                pokemonEl.parentNode.removeChild(pokemonEl);
-                evt.stopPropagation(); // Ngăn sự kiện chạm lan xuống mặt phẳng
+            const pokemonTypes = [
+                { name: 'Pikachu', color: '#F4D03F', scale: '0.2 0.2 0.2' },
+                { name: 'Bulbasaur', color: '#27AE60', scale: '0.25 0.2 0.25' },
+                { name: 'Charmander', color: '#E67E22', scale: '0.2 0.25 0.2' }
+            ];
+
+            // Lắng nghe sự kiện khi AR Mode bắt đầu
+            sceneEl.addEventListener('enter-vr', () => {
+                console.log("Đã vào chế độ VR/AR");
+                if (sceneEl.is('ar-mode')) {
+                    ui.style.display = 'block';
+                    console.log("Đã bật AR Mode thành công!");
+                }
             });
 
-            // Thêm vào scene
-            sceneEl.appendChild(pokemonEl);
-            
-            // Cập nhật UI
-            ui.innerText = "Đã xuất hiện Pokemon! Chạm vào nó để bắt!";
-        }
+            window.addEventListener('touchstart', (e) => {
+                if (reticle && reticle.getAttribute('visible')) {
+                    spawnPokemon(reticle.getAttribute('position'));
+                }
+            });
 
-        // Cập nhật trạng thái Reticle
-        reticle.addEventListener('targetFound', () => {
-            ui.innerText = "Chạm vào màn hình để thả Pokemon ra đây!";
-        });
-        reticle.addEventListener('targetLost', () => {
-            ui.innerText = "Đang tìm mặt phẳng (Di chuyển điện thoại từ từ)...";
+            function spawnPokemon(position) {
+                const randomPoke = pokemonTypes[Math.floor(Math.random() * pokemonTypes.length)];
+                const pokemonEl = document.createElement('a-entity');
+                
+                pokemonEl.setAttribute('geometry', 'primitive: box');
+                pokemonEl.setAttribute('material', `color: ${randomPoke.color}`);
+                pokemonEl.setAttribute('position', position);
+                pokemonEl.setAttribute('scale', randomPoke.scale);
+                pokemonEl.classList.add('pokemon');
+
+                pokemonEl.setAttribute('animation', `property: scale; from: 0 0 0; to: ${randomPoke.scale}; dur: 500; easing: easeOutElastic`);
+
+                pokemonEl.addEventListener('click', function (evt) {
+                    alert(`Tuyệt vời! Bạn đã bắt được ${randomPoke.name}! 🔴`);
+                    pokemonEl.parentNode.removeChild(pokemonEl);
+                    evt.stopPropagation();
+                });
+
+                sceneEl.appendChild(pokemonEl);
+                ui.innerText = "Đã xuất hiện Pokemon! Chạm vào nó để bắt!";
+                console.log("Đã spawn:", randomPoke.name);
+            }
+
+            if(reticle) {
+                reticle.addEventListener('targetFound', () => {
+                    ui.innerText = "Chạm vào màn hình để thả Pokemon ra đây!";
+                });
+                reticle.addEventListener('targetLost', () => {
+                    ui.innerText = "Đang tìm mặt phẳng (Di chuyển điện thoại từ từ)...";
+                });
+            }
         });
     </script>
 </body>
