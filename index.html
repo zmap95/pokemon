@@ -2,104 +2,34 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Pokémon Catcher (AR.js)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Pokemon Safari</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <style>
-        #ui {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            display: block;
-            pointer-events: none;
-            text-align: center;
-        }
-    </style>
 </head>
-<body>
+<body style="margin: 0; overflow: hidden;">
 
-    <div id="ui">Xung quanh bạn đang có Pokémon... Hãy chĩa camera để tìm!</div>
-
-    <a-scene embedded arjs='sourceType: camera; debugUIEnabled: false; trackingMethod: best;' renderer="logarithmicDepthBuffer: true;">
+    <a-scene 
+        embedded 
+        arjs="sourceType: camera; debugUIEnabled: false;" 
+        vr-mode-ui="enabled: false">
         
         <a-assets>
-            <a-asset-item id="pokemonModel" src="https://raw.githubusercontent.com/NyanHedgehog/pokemon-models/master/gen1/gengar.glb"></a-asset-item>
+             <a-asset-item id="pokemonModel" src="https://raw.githubusercontent.com/NyanHedgehog/pokemon-models/master/gen1/gengar.glb"></a-asset-item>
         </a-assets>
 
-        <a-camera gps-camera rotation-reader>
-            <a-entity cursor="rayOrigin: mouse;" raycaster="objects: .pokemon"></a-entity>
-        </a-camera>
+        <a-marker preset="hiro">
+            <a-entity 
+                gltf-model="#pokemonModel" 
+                scale="0.05 0.05 0.05" 
+                position="0 0 0" 
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 5000">
+            </a-entity>
+        </a-marker>
+
+        <a-entity camera></a-entity>
 
     </a-scene>
 
-    <script>
-        // Danh sách các Pokemon (Để đơn giản ta dùng 1 loại, nhưng scale khác nhau cho vui)
-        const pokemonTypes = [
-            { name: 'Gengar (Cấp 1)', scale: '0.01 0.01 0.01', model: '#pokemonModel' },
-            { name: 'Gengar (Cấp 2)', scale: '0.015 0.015 0.015', model: '#pokemonModel' },
-            { name: 'Gengar (Cấp 3)', scale: '0.02 0.02 0.02', model: '#pokemonModel' }
-        ];
-
-        // Hàm random tọa độ GPS nhỏ xung quanh vị trí người chơi
-        function getRandomPosition() {
-            // Đặt Pokemon ở khoảng 5-10 mét xung quanh bạn
-            const latitudeOffset = (Math.random() - 0.5) * 0.0002;
-            const longitudeOffset = (Math.random() - 0.5) * 0.0002;
-            return { lat: latitudeOffset, long: longitudeOffset };
-        }
-
-        // Tạo Pokémon tại vị trí tương đối
-        function spawnPokemon() {
-            const sceneEl = document.querySelector('a-scene');
-            const randomPokeData = pokemonTypes[Math.floor(Math.random() * pokemonTypes.length)];
-            const relativePos = getRandomPosition();
-
-            // Tạo entity
-            const pokemonEl = document.createElement('a-entity');
-            
-            // Gán thuộc tính mô hình 3D và scale
-            pokemonEl.setAttribute('gltf-model', randomPokeData.model);
-            pokemonEl.setAttribute('scale', randomPokeData.scale);
-            
-            // Gán vị trí GPS (gps-entity-place)
-            // Lấy tọa độ GPS của người dùng thông qua camera và cộng thêm offset
-            navigator.geolocation.getCurrentPosition((position) => {
-                const finalLatitude = position.coords.latitude + relativePos.lat;
-                const finalLongitude = position.coords.longitude + relativePos.long;
-                pokemonEl.setAttribute('gps-entity-place', `latitude: ${finalLatitude}; longitude: ${finalLongitude};`);
-                console.log(`Đã spawn ${randomPokeData.name} tại (${finalLatitude}, ${finalLongitude})`);
-            });
-
-            // Gán class để Raycaster nhận diện
-            pokemonEl.classList.add('pokemon');
-
-            // Thêm sự kiện chạm để bắt
-            pokemonEl.addEventListener('click', function (evt) {
-                alert(`Chúc mừng! Bạn đã bắt được ${randomPokeData.name}! 🔴`);
-                pokemonEl.parentNode.removeChild(pokemonEl);
-                evt.stopPropagation();
-            });
-
-            sceneEl.appendChild(pokemonEl);
-        }
-
-        // Tự động tạo một vài Pokémon khi load trang
-        window.onload = () => {
-            // Chờ 1 giây để đảm bảo camera đã ổn định
-            setTimeout(() => {
-                for (let i = 0; i < 3; i++) {
-                    spawnPokemon();
-                }
-            }, 1000);
-        };
-    </script>
 </body>
 </html>
