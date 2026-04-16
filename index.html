@@ -1,451 +1,389 @@
 
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #000; }
-#game-container {
-  position: relative;
-  width: 100%;
-  height: 100svh;
-  min-height: 500px;
-  overflow: hidden;
-  background: #111;
-  font-family: var(--font-sans, sans-serif);
-}
-#video { width: 100%; height: 100%; object-fit: cover; display: block; }
-#canvas-overlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none;
-}
-#ui-overlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none;
-}
-.pokemon-sprite {
-  position: absolute;
-  cursor: pointer;
-  pointer-events: all;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s;
-  user-select: none;
-  animation: float 2.5s ease-in-out infinite;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
-}
-.pokemon-sprite:active { transform: translate(-50%, -50%) scale(0.85); }
-.pokemon-sprite svg { display: block; }
-@keyframes float {
-  0%,100% { transform: translate(-50%, -60%); }
-  50% { transform: translate(-50%, -40%); }
-}
-.pokemon-sprite.catching {
-  animation: catch-anim 0.6s forwards;
-}
-@keyframes catch-anim {
-  0% { transform: translate(-50%,-50%) scale(1); opacity:1; }
-  40% { transform: translate(-50%,-50%) scale(1.3); opacity:0.8; }
-  100% { transform: translate(-50%,-50%) scale(0); opacity:0; }
-}
-#hud-top {
-  position: absolute; top: 0; left: 0; right: 0;
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 16px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent);
-  pointer-events: none;
-}
-#score-display {
-  color: #fff; font-size: 16px; font-weight: 500;
-  background: rgba(0,0,0,0.4); border-radius: 20px; padding: 6px 14px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-}
-#timer-display {
-  color: #fff; font-size: 16px; font-weight: 500;
-  background: rgba(220,50,50,0.7); border-radius: 20px; padding: 6px 14px;
-}
-#pokeball-count {
-  color: #fff; font-size: 14px;
-  background: rgba(0,0,0,0.4); border-radius: 20px; padding: 6px 12px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-}
-#start-screen {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.82);
-  color: #fff; text-align: center; padding: 24px;
-  z-index: 10;
-}
-#start-screen h1 { font-size: 28px; font-weight: 700; color: #FFD700; margin-bottom: 8px; text-shadow: 0 0 20px #FFD70088; }
-#start-screen p { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 24px; max-width: 280px; }
-#start-btn {
-  background: #e63946; color: #fff; border: none; border-radius: 30px;
-  font-size: 18px; font-weight: 600; padding: 14px 36px; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(230,57,70,0.5);
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-#start-btn:hover { transform: scale(1.05); box-shadow: 0 6px 28px rgba(230,57,70,0.7); }
-#cam-error { color: #ff6b6b; font-size: 13px; margin-top: 12px; display: none; }
-.catch-effect {
-  position: absolute; transform: translate(-50%,-50%);
-  pointer-events: none; animation: ripple 0.6s ease-out forwards;
-}
-@keyframes ripple {
-  0% { width: 20px; height: 20px; opacity: 1; border: 3px solid #FFD700; border-radius: 50%; }
-  100% { width: 120px; height: 120px; opacity: 0; border: 3px solid #FFD700; border-radius: 50%; }
-}
-#toast {
-  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
-  background: rgba(255,215,0,0.92); color: #222; font-weight: 600; font-size: 15px;
-  padding: 8px 20px; border-radius: 20px; pointer-events: none;
-  opacity: 0; transition: opacity 0.3s;
-  white-space: nowrap; z-index: 5;
-}
-#toast.show { opacity: 1; }
-#game-over {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.88); color: #fff; text-align: center;
-  z-index: 10; display: none; padding: 24px;
-}
-#game-over h2 { font-size: 30px; font-weight: 700; color: #FFD700; margin-bottom: 12px; }
-#game-over .final-score { font-size: 48px; font-weight: 700; margin: 12px 0; }
-#game-over p { color: rgba(255,255,255,0.7); margin-bottom: 24px; }
-#replay-btn {
-  background: #FFD700; color: #222; border: none; border-radius: 30px;
-  font-size: 17px; font-weight: 700; padding: 14px 36px; cursor: pointer;
-}
-#poke-list {
-  position: absolute; bottom: 16px; left: 0; right: 0;
-  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 0 12px;
-  pointer-events: none;
-}
-.caught-icon {
-  width: 36px; height: 36px; background: rgba(0,0,0,0.5);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 20px; border: 2px solid rgba(255,215,0,0.6);
-  animation: popIn 0.3s ease-out;
-}
-@keyframes popIn {
-  0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); }
-}
-.pokeball-throw {
-  position: absolute; pointer-events: none;
-  width: 28px; height: 28px;
-  animation: throwBall 0.5s ease-in forwards;
-}
-@keyframes throwBall {
-  0% { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-  100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(720deg); }
-}
+*{box-sizing:border-box;margin:0;padding:0}
+#gc{position:relative;width:100%;height:100svh;min-height:520px;overflow:hidden;background:#111;font-family:sans-serif}
+#video{width:100%;height:100%;object-fit:cover;display:block}
+#threeCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#hitLayer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:all}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);pointer-events:none}
+.hval{color:#fff;font-size:15px;font-weight:600;background:rgba(0,0,0,.4);border-radius:20px;padding:6px 14px;border:1.5px solid rgba(255,255,255,.2)}
+#timerH{background:rgba(200,40,40,.75)}
+#toast{position:absolute;top:68px;left:50%;transform:translateX(-50%);background:rgba(255,215,0,.93);color:#222;font-weight:700;font-size:14px;padding:7px 18px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;z-index:5}
+#toast.show{opacity:1}
+#plist{position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:7px;flex-wrap:wrap;padding:0 10px;pointer-events:none}
+.ci{width:34px;height:34px;background:rgba(0,0,0,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,215,0,.6);animation:popIn .3s ease-out}
+@keyframes popIn{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
+#startS{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.85);color:#fff;text-align:center;padding:24px;z-index:10}
+#startS h1{font-size:26px;font-weight:700;color:#FFD700;margin-bottom:8px}
+#startS p{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:22px;max-width:280px;line-height:1.6}
+#startBtn{background:#e63946;color:#fff;border:none;border-radius:30px;font-size:17px;font-weight:700;padding:13px 34px;cursor:pointer}
+#camErr{color:#ff6b6b;font-size:12px;margin-top:10px;display:none}
+#gameOver{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.88);color:#fff;text-align:center;z-index:10;padding:24px}
+#gameOver h2{font-size:28px;font-weight:700;color:#FFD700;margin-bottom:10px}
+.fscore{font-size:52px;font-weight:700;margin:10px 0}
+#gameOver p{color:rgba(255,255,255,.7);margin-bottom:22px}
+#replayBtn{background:#FFD700;color:#222;border:none;border-radius:30px;font-size:16px;font-weight:700;padding:13px 34px;cursor:pointer}
+.ripple{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:rip .6s ease-out forwards;border:3px solid #FFD700;border-radius:50%}
+@keyframes rip{0%{width:20px;height:20px;opacity:1}100%{width:110px;height:110px;opacity:0}}
+.pball{position:absolute;pointer-events:none;width:26px;height:26px;animation:pthrow .5s ease-in forwards}
+@keyframes pthrow{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0deg)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(.3) rotate(720deg)}}
+#nameTag{position:absolute;pointer-events:none;color:#fff;font-size:12px;font-weight:700;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:10px;transform:translateX(-50%);white-space:nowrap;opacity:0;transition:opacity .2s}
 </style>
 
-<div id="game-container">
+<div id="gc">
   <video id="video" autoplay playsinline muted></video>
-  <canvas id="canvas-overlay"></canvas>
-  <div id="ui-overlay">
-    <div id="hud-top">
-      <div id="score-display">⭐ 0</div>
-      <div id="timer-display">60s</div>
-      <div id="pokeball-count">🔴 10</div>
-    </div>
-    <div id="toast"></div>
-    <div id="poke-list"></div>
+  <canvas id="threeCanvas"></canvas>
+  <div id="hitLayer"></div>
+  <div id="hud">
+    <div class="hval" id="scoreH">⭐ 0</div>
+    <div class="hval" id="timerH">60s</div>
+    <div class="hval" id="ballH">🔴 10</div>
   </div>
+  <div id="toast"></div>
+  <div id="plist"></div>
+  <div id="nameTag"></div>
 
-  <div id="start-screen">
-    <div style="font-size:72px;margin-bottom:8px">🎮</div>
-    <h1>Pokémon AR Catcher</h1>
-    <p>Nhấn bắt đầu để mở camera. Các Pokémon sẽ xuất hiện trên màn hình — chạm vào để bắt!</p>
-    <button id="start-btn" onclick="startGame()">Bắt đầu chơi</button>
-    <div id="cam-error">⚠️ Không thể mở camera. Vui lòng cấp quyền truy cập camera.</div>
+  <div id="startS">
+    <div style="font-size:64px;margin-bottom:6px">🎮</div>
+    <h1>Pokémon AR 3D</h1>
+    <p>Pokémon 3D low-poly sẽ xuất hiện trên camera thật. Chạm vào để bắt!</p>
+    <button id="startBtn" onclick="startGame()">Bắt đầu chơi</button>
+    <div id="camErr">⚠️ Không thể mở camera — hãy cấp quyền và thử lại.</div>
   </div>
-
-  <div id="game-over">
-    <div style="font-size:64px">🏆</div>
+  <div id="gameOver">
+    <div style="font-size:60px">🏆</div>
     <h2>Hết giờ!</h2>
-    <div class="final-score" id="final-score">0</div>
-    <p id="final-msg">Pokémon đã bắt được</p>
-    <button id="replay-btn" onclick="resetGame()">Chơi lại</button>
+    <div class="fscore" id="fscore">0</div>
+    <p id="fmsg">Pokémon đã bắt</p>
+    <button id="replayBtn" onclick="resetGame()">Chơi lại</button>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const POKEMON = [
-  { name: 'Pikachu', emoji: '⚡', color: '#FFD700', points: 10, svg: pikachu() },
-  { name: 'Bulbasaur', emoji: '🌿', color: '#78C850', points: 15, svg: bulbasaur() },
-  { name: 'Charmander', emoji: '🔥', color: '#F08030', points: 15, svg: charmander() },
-  { name: 'Squirtle', emoji: '💧', color: '#6890F0', points: 15, svg: squirtle() },
-  { name: 'Gengar', emoji: '👻', color: '#705898', points: 25, svg: gengar() },
-  { name: 'Mewtwo', emoji: '🧬', color: '#A040A0', points: 50, svg: mewtwo() },
+const gc=document.getElementById('gc');
+const video=document.getElementById('video');
+const threeCanvas=document.getElementById('threeCanvas');
+const hitLayer=document.getElementById('hitLayer');
+const nameTag=document.getElementById('nameTag');
+
+let scene,camera,renderer,animId;
+let pokemons3d=[];
+let score=0,timeLeft=60,pokeballs=10,gameRunning=false;
+let spawnInt,timerInt,caught=[];
+let W,H;
+
+function initThree(){
+  W=gc.offsetWidth; H=gc.offsetHeight;
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(60,W/H,0.1,1000);
+  camera.position.z=5;
+  renderer=new THREE.WebGLRenderer({canvas:threeCanvas,alpha:true,antialias:true});
+  renderer.setSize(W,H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setClearColor(0x000000,0);
+  const amb=new THREE.AmbientLight(0xffffff,0.7);
+  scene.add(amb);
+  const dir=new THREE.DirectionalLight(0xffffff,0.9);
+  dir.position.set(3,5,3);
+  scene.add(dir);
+  animate();
+}
+
+function animate(){
+  animId=requestAnimationFrame(animate);
+  const t=Date.now()*0.001;
+  pokemons3d.forEach(p=>{
+    if(!p.mesh)return;
+    p.mesh.rotation.y+=0.025;
+    p.mesh.position.y=p.baseY+Math.sin(t*1.8+p.phase)*0.12;
+  });
+  renderer.render(scene,camera);
+}
+
+const PDEFS=[
+  {name:'Pikachu',emoji:'⚡',pts:10,color:0xFFD700,accent:0xFF8C00,build:'pikachu'},
+  {name:'Bulbasaur',emoji:'🌿',pts:15,color:0x78C850,accent:0x4CAF50,build:'bulbasaur'},
+  {name:'Charmander',emoji:'🔥',pts:15,color:0xF08030,accent:0xFF4500,build:'charmander'},
+  {name:'Squirtle',emoji:'💧',pts:15,color:0x6890F0,accent:0x3366CC,build:'squirtle'},
+  {name:'Gengar',emoji:'👻',pts:25,color:0x705898,accent:0xFF0000,build:'gengar'},
+  {name:'Mewtwo',emoji:'🧬',pts:50,color:0xC070C0,accent:0x7030A0,build:'mewtwo'},
 ];
 
-function pikachu() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="48" rx="22" ry="20" fill="#FFD700"/>
-    <ellipse cx="40" cy="36" rx="18" ry="17" fill="#FFD700"/>
-    <ellipse cx="30" cy="52" rx="8" ry="5" fill="#FF8C00" opacity="0.7"/>
-    <ellipse cx="50" cy="52" rx="8" ry="5" fill="#FF8C00" opacity="0.7"/>
-    <ellipse cx="33" cy="34" rx="5" ry="6" fill="#333"/>
-    <ellipse cx="47" cy="34" rx="5" ry="6" fill="#333"/>
-    <circle cx="34" cy="33" r="2" fill="#fff"/>
-    <circle cx="48" cy="33" r="2" fill="#fff"/>
-    <circle cx="35" cy="34" r="1" fill="#111"/>
-    <circle cx="49" cy="34" r="1" fill="#111"/>
-    <ellipse cx="40" cy="40" rx="3" ry="2" fill="#FF8C00"/>
-    <path d="M35 44 Q40 48 45 44" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <rect x="23" y="10" width="8" height="20" rx="4" fill="#FFD700" transform="rotate(-15 27 20)"/>
-    <polygon points="23,12 27,2 31,12" fill="#333"/>
-    <rect x="49" y="10" width="8" height="20" rx="4" fill="#FFD700" transform="rotate(15 53 20)"/>
-    <polygon points="49,12 53,2 57,12" fill="#333"/>
-  </svg>`;
-}
-function bulbasaur() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="52" rx="24" ry="18" fill="#78C850"/>
-    <ellipse cx="40" cy="38" rx="19" ry="17" fill="#78C850"/>
-    <ellipse cx="40" cy="30" rx="14" ry="16" fill="#4CAF50" opacity="0.8"/>
-    <ellipse cx="32" cy="40" rx="4" ry="5" fill="#fff"/>
-    <ellipse cx="48" cy="40" rx="4" ry="5" fill="#fff"/>
-    <circle cx="32" cy="41" r="2" fill="#e44"/>
-    <circle cx="48" cy="41" r="2" fill="#e44"/>
-    <circle cx="33" cy="40" r="1" fill="#111"/>
-    <circle cx="49" cy="40" r="1" fill="#111"/>
-    <ellipse cx="40" cy="47" rx="3" ry="2" fill="#5a9"/>
-    <path d="M35 51 Q40 55 45 51" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <ellipse cx="30" cy="56" rx="5" ry="3" fill="#90EE90" opacity="0.7"/>
-    <ellipse cx="50" cy="56" rx="5" ry="3" fill="#90EE90" opacity="0.7"/>
-  </svg>`;
-}
-function charmander() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="52" rx="20" ry="18" fill="#F08030"/>
-    <ellipse cx="40" cy="36" rx="17" ry="16" fill="#F08030"/>
-    <path d="M58 60 Q65 55 62 45 Q60 40 56 42 Q55 50 58 60Z" fill="#F08030"/>
-    <circle cx="62" cy="38" r="7" fill="#FF4500"/>
-    <circle cx="62" cy="36" r="5" fill="#FF6600"/>
-    <circle cx="62" cy="34" r="3" fill="#FFD700"/>
-    <ellipse cx="33" cy="34" rx="5" ry="6" fill="#fff"/>
-    <ellipse cx="47" cy="34" rx="5" ry="6" fill="#fff"/>
-    <circle cx="34" cy="35" r="2.5" fill="#e44"/>
-    <circle cx="48" cy="35" r="2.5" fill="#e44"/>
-    <circle cx="35" cy="35" r="1.2" fill="#111"/>
-    <circle cx="49" cy="35" r="1.2" fill="#111"/>
-    <ellipse cx="40" cy="42" rx="3" ry="2" fill="#cc5500"/>
-    <path d="M35 47 Q40 51 45 47" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <ellipse cx="28" cy="56" rx="6" ry="3" fill="#FFDB99" opacity="0.8"/>
-    <ellipse cx="52" cy="56" rx="6" ry="3" fill="#FFDB99" opacity="0.8"/>
-  </svg>`;
-}
-function squirtle() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="54" rx="22" ry="16" fill="#7038F8" opacity="0.5"/>
-    <ellipse cx="40" cy="52" rx="20" ry="18" fill="#6890F0"/>
-    <ellipse cx="40" cy="52" rx="15" ry="13" fill="#B8D4F8"/>
-    <ellipse cx="40" cy="36" rx="18" ry="16" fill="#6890F0"/>
-    <ellipse cx="32" cy="34" rx="5" ry="6" fill="#fff"/>
-    <ellipse cx="48" cy="34" rx="5" ry="6" fill="#fff"/>
-    <circle cx="32" cy="35" r="2.5" fill="#4488FF"/>
-    <circle cx="48" cy="35" r="2.5" fill="#4488FF"/>
-    <circle cx="33" cy="35" r="1.2" fill="#111"/>
-    <circle cx="49" cy="35" r="1.2" fill="#111"/>
-    <ellipse cx="40" cy="42" rx="3" ry="2" fill="#4468c0"/>
-    <path d="M35 46 Q40 51 45 46" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M55 58 Q65 55 63 65 Q60 72 55 68Z" fill="#6890F0"/>
-  </svg>`;
-}
-function gengar() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="50" rx="24" ry="22" fill="#705898"/>
-    <ellipse cx="40" cy="35" rx="20" ry="20" fill="#705898"/>
-    <path d="M20 35 Q16 25 22 18 Q28 12 34 20Z" fill="#705898"/>
-    <path d="M60 35 Q64 25 58 18 Q52 12 46 20Z" fill="#705898"/>
-    <ellipse cx="32" cy="33" rx="7" ry="7" fill="#FF0000" opacity="0.9"/>
-    <ellipse cx="48" cy="33" rx="7" ry="7" fill="#FF0000" opacity="0.9"/>
-    <circle cx="33" cy="33" r="3" fill="#111"/>
-    <circle cx="49" cy="33" r="3" fill="#111"/>
-    <circle cx="32" cy="32" r="1" fill="#fff"/>
-    <circle cx="48" cy="32" r="1" fill="#fff"/>
-    <path d="M30 46 Q40 54 50 46" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <circle cx="33" cy="48" r="2" fill="#fff"/>
-    <circle cx="47" cy="48" r="2" fill="#fff"/>
-    <circle cx="40" cy="50" r="1.5" fill="#fff"/>
-  </svg>`;
-}
-function mewtwo() {
-  return `<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="52" rx="18" ry="20" fill="#A040A0"/>
-    <ellipse cx="40" cy="32" rx="16" ry="16" fill="#C070C0"/>
-    <path d="M38 16 Q40 8 42 16" stroke="#A040A0" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M28 20 Q22 12 26 10 Q30 8 30 18" fill="#C070C0"/>
-    <path d="M52 20 Q58 12 54 10 Q50 8 50 18" fill="#C070C0"/>
-    <ellipse cx="33" cy="31" rx="5" ry="5" fill="#fff"/>
-    <ellipse cx="47" cy="31" rx="5" ry="5" fill="#fff"/>
-    <circle cx="33" cy="32" r="3" fill="#7030A0"/>
-    <circle cx="47" cy="32" r="3" fill="#7030A0"/>
-    <circle cx="32" cy="31" r="1" fill="#fff"/>
-    <circle cx="46" cy="31" r="1" fill="#fff"/>
-    <ellipse cx="40" cy="39" rx="3" ry="2" fill="#904090"/>
-    <path d="M34 43 Q40 47 46 43" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M56 54 Q64 50 62 60 Q60 68 55 64Z" fill="#A040A0"/>
-    <path d="M24 54 Q16 50 18 60 Q20 68 25 64Z" fill="#A040A0"/>
-  </svg>`;
-}
+function buildMesh(def){
+  const g=new THREE.Group();
+  const M=THREE.MeshToonMaterial||THREE.MeshLambertMaterial;
+  const mat=c=>new M({color:c});
 
-let score = 0, timeLeft = 60, pokeballs = 10, gameRunning = false;
-let spawnInterval, timerInterval;
-let caughtPokemon = [];
-const container = document.getElementById('game-container');
-const video = document.getElementById('video');
-const startScreen = document.getElementById('start-screen');
-const gameOverScreen = document.getElementById('game-over');
-
-async function startGame() {
-  const errorEl = document.getElementById('cam-error');
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
+  if(def.build==='pikachu'){
+    const body=new THREE.Mesh(new THREE.SphereGeometry(.32,8,8),mat(def.color));
+    g.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),mat(def.color));
+    head.position.set(0,.45,0);g.add(head);
+    const cheekL=new THREE.Mesh(new THREE.SphereGeometry(.09,6,6),mat(0xFF6699));
+    cheekL.position.set(-.18,.38,.2);g.add(cheekL);
+    const cheekR=cheekL.clone();cheekR.position.x=.18;g.add(cheekR);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.055,6,6),mat(0x111111));
+    eyeL.position.set(-.1,.52,.24);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.1;g.add(eyeR);
+    const earL=new THREE.Mesh(new THREE.ConeGeometry(.07,.28,4),mat(0x222222));
+    earL.position.set(-.15,.78,0);earL.rotation.z=-.3;g.add(earL);
+    const earR=earL.clone();earR.position.x=.15;earR.rotation.z=.3;g.add(earR);
+    const tail=new THREE.Mesh(new THREE.ConeGeometry(.06,.35,4),mat(def.color));
+    tail.position.set(.35,-.1,-.1);tail.rotation.z=.8;g.add(tail);
+  } else if(def.build==='bulbasaur'){
+    const body=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),mat(def.color));
+    body.scale.y=.8;g.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.27,8,8),mat(def.color));
+    head.position.set(0,.4,0);g.add(head);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.2,7,7),mat(def.accent));
+    bulb.position.set(0,.3,-.2);g.add(bulb);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.055,6,6),mat(0xCC4444));
+    eyeL.position.set(-.1,.46,.22);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.1;g.add(eyeR);
+    const spotL=new THREE.Mesh(new THREE.CircleGeometry(.06,6),mat(0x4a7c4a));
+    spotL.position.set(-.2,.05,.34);g.add(spotL);
+    const spotR=spotL.clone();spotR.position.x=.2;g.add(spotR);
+  } else if(def.build==='charmander'){
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,.5,8),mat(def.color));
+    body.position.y=-.1;g.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.27,8,8),mat(def.color));
+    head.position.set(0,.42,0);g.add(head);
+    const belly=new THREE.Mesh(new THREE.SphereGeometry(.18,7,7),mat(0xFFDB99));
+    belly.position.set(0,.05,.2);belly.scale.z=.5;g.add(belly);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.055,6,6),mat(0x111111));
+    eyeL.position.set(-.1,.5,.23);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.1;g.add(eyeR);
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(.08,.22,6),mat(0xFF4500));
+    flame.position.set(.3,-.15,-.1);flame.rotation.z=-.6;g.add(flame);
+    const flame2=new THREE.Mesh(new THREE.ConeGeometry(.05,.14,6),mat(0xFFD700));
+    flame2.position.set(.3,-.05,-.1);flame2.rotation.z=-.6;g.add(flame2);
+  } else if(def.build==='squirtle'){
+    const shell=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),mat(0x7038F8));
+    shell.scale.set(1,.75,1);g.add(shell);
+    const body=new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),mat(def.color));
+    g.add(body);
+    const belly=new THREE.Mesh(new THREE.SphereGeometry(.22,7,7),mat(0xB8D4F8));
+    belly.position.set(0,0,.18);belly.scale.z=.5;g.add(belly);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.26,8,8),mat(def.color));
+    head.position.set(0,.38,0);g.add(head);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),mat(0x4488FF));
+    eyeL.position.set(-.1,.44,.2);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.1;g.add(eyeR);
+    const tail=new THREE.Mesh(new THREE.TorusGeometry(.12,.04,6,8,Math.PI),mat(def.color));
+    tail.position.set(0,-.1,-.28);tail.rotation.x=.5;g.add(tail);
+  } else if(def.build==='gengar'){
+    const body=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),mat(def.color));
+    g.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.3,8,8),mat(def.color));
+    head.position.set(0,.42,0);g.add(head);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),mat(def.accent));
+    eyeL.position.set(-.11,.5,.22);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.11;g.add(eyeR);
+    const pupL=new THREE.Mesh(new THREE.SphereGeometry(.04,5,5),mat(0x111111));
+    pupL.position.set(-.11,.5,.28);g.add(pupL);
+    const pupR=pupL.clone();pupR.position.x=.11;g.add(pupR);
+    const earL=new THREE.Mesh(new THREE.ConeGeometry(.1,.2,4),mat(def.color));
+    earL.position.set(-.2,.72,0);earL.rotation.z=-.25;g.add(earL);
+    const earR=earL.clone();earR.position.x=.2;earR.rotation.z=.25;g.add(earR);
+    [-0.12,0,0.12].forEach(x=>{
+      const t=new THREE.Mesh(new THREE.ConeGeometry(.05,.12,4),mat(0xffffff));
+      t.position.set(x,.28,.3);t.rotation.x=-.4;g.add(t);
     });
-    video.srcObject = stream;
-    await video.play();
-  } catch (e) {
-    try {
-      const stream2 = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      video.srcObject = stream2;
-      await video.play();
-    } catch (e2) {
-      errorEl.style.display = 'block';
-      errorEl.textContent = '⚠️ Không thể mở camera. Hãy cho phép truy cập camera và thử lại.';
-      return;
-    }
+  } else {
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.5,8),mat(def.color));
+    body.position.y=-.08;g.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.26,8,8),mat(0xC8A8E0));
+    head.position.set(0,.42,0);g.add(head);
+    const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.065,6,6),mat(0x7030A0));
+    eyeL.position.set(-.1,.48,.2);g.add(eyeL);
+    const eyeR=eyeL.clone();eyeR.position.x=.1;g.add(eyeR);
+    const earL=new THREE.Mesh(new THREE.ConeGeometry(.06,.22,5),mat(def.color));
+    earL.position.set(-.15,.72,0);earL.rotation.z=-.2;g.add(earL);
+    const earR=earL.clone();earR.position.x=.15;earR.rotation.z=.2;g.add(earR);
+    const tailG=new THREE.Mesh(new THREE.CylinderGeometry(.03,.05,.4,6),mat(def.color));
+    tailG.position.set(.28,-.15,-.15);tailG.rotation.z=.7;g.add(tailG);
+    const auraL=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),mat(0x9040B0));
+    auraL.position.set(-.28,.1,.1);g.add(auraL);
+    const auraR=auraL.clone();auraR.position.x=.28;g.add(auraR);
   }
-  startScreen.style.display = 'none';
-  gameRunning = true;
-  score = 0; timeLeft = 60; pokeballs = 10; caughtPokemon = [];
-  updateHUD();
-  spawnInterval = setInterval(spawnPokemon, 2200);
-  timerInterval = setInterval(tick, 1000);
-  setTimeout(spawnPokemon, 400);
-  setTimeout(spawnPokemon, 1200);
+  return g;
 }
 
-function tick() {
-  if (!gameRunning) return;
-  timeLeft--;
-  updateHUD();
-  if (timeLeft <= 0) endGame();
+function worldToScreen(mesh){
+  const pos=new THREE.Vector3();
+  mesh.getWorldPosition(pos);
+  pos.project(camera);
+  return{
+    x:(pos.x*.5+.5)*W,
+    y:(-.5*pos.y+.5)*H,
+    visible:pos.z<1
+  };
 }
 
-function updateHUD() {
-  document.getElementById('score-display').textContent = '⭐ ' + score;
-  document.getElementById('timer-display').textContent = timeLeft + 's';
-  document.getElementById('pokeball-count').textContent = '🔴 ' + pokeballs;
-  if (timeLeft <= 10) document.getElementById('timer-display').style.background = 'rgba(220,30,30,0.9)';
+function spawnPokemon(){
+  if(!gameRunning||pokemons3d.length>=4)return;
+  const def=PDEFS[Math.floor(Math.random()*PDEFS.length)];
+  const mesh=buildMesh(def);
+  const x=(Math.random()-.5)*4.5;
+  const y=(Math.random()-.5)*2.2+.3;
+  const z=(Math.random()-.5)*.8-1.5;
+  mesh.position.set(x,y,z);
+  const baseY=y;
+  const phase=Math.random()*Math.PI*2;
+  scene.add(mesh);
+  const entry={mesh,def,baseY,phase,alive:true,id:Date.now()+Math.random()};
+  pokemons3d.push(entry);
+  setTimeout(()=>{
+    if(entry.alive)removePokemon(entry);
+  },8000);
 }
 
-function spawnPokemon() {
-  if (!gameRunning) return;
-  const existing = container.querySelectorAll('.pokemon-sprite');
-  if (existing.length >= 4) return;
-  const pkm = POKEMON[Math.floor(Math.random() * POKEMON.length)];
-  const margin = 80;
-  const x = margin + Math.random() * (container.offsetWidth - margin * 2);
-  const y = 100 + Math.random() * (container.offsetHeight - 220);
-  const el = document.createElement('div');
-  el.className = 'pokemon-sprite';
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  el.innerHTML = pkm.svg;
-  el.dataset.name = pkm.name;
-  el.dataset.emoji = pkm.emoji;
-  el.dataset.points = pkm.points;
-  el.style.animationDelay = (Math.random() * 1.5) + 's';
-  el.addEventListener('click', () => catchPokemon(el, x, y));
-  container.appendChild(el);
-  setTimeout(() => { if (el.parentNode) el.remove(); }, 7000);
+function removePokemon(entry){
+  if(!entry.alive)return;
+  entry.alive=false;
+  scene.remove(entry.mesh);
+  pokemons3d=pokemons3d.filter(p=>p!==entry);
 }
 
-function catchPokemon(el, x, y) {
-  if (!gameRunning || el.classList.contains('catching')) return;
-  if (pokeballs <= 0) { showToast('Hết Pokéball! 😱'); return; }
+function setupHitDetection(){
+  hitLayer.addEventListener('click',onTap);
+  hitLayer.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];onTap({clientX:t.clientX,clientY:t.clientY});},{passive:false});
+}
+
+function onTap(e){
+  if(!gameRunning)return;
+  const rect=gc.getBoundingClientRect();
+  const cx=e.clientX-rect.left;
+  const cy=e.clientY-rect.top;
+  let hit=null,minDist=55;
+  pokemons3d.forEach(p=>{
+    if(!p.alive)return;
+    const s=worldToScreen(p.mesh);
+    if(!s.visible)return;
+    const d=Math.hypot(cx-s.x,cy-s.y);
+    if(d<minDist){minDist=d;hit=p;}
+  });
+  if(hit)catchPokemon(hit,cx,cy);
+}
+
+function catchPokemon(entry,cx,cy){
+  if(pokeballs<=0){showToast('Hết Pokéball! 😱');return;}
   pokeballs--;
-  throwPokeball(x, y);
-  el.classList.add('catching');
-  const pts = parseInt(el.dataset.points);
-  const name = el.dataset.name;
-  const emoji = el.dataset.emoji;
-  score += pts;
-  caughtPokemon.push({ name, emoji, points: pts });
+  throwBall(cx,cy);
+  addRipple(cx,cy);
+  score+=entry.def.pts;
+  caught.push(entry.def);
   updateHUD();
-  addRipple(x, y);
-  showToast(emoji + ' ' + name + ' +' + pts + 'pts!');
-  addCaughtIcon(emoji);
-  setTimeout(() => { if (el.parentNode) el.remove(); }, 600);
-  if (pokeballs <= 0) setTimeout(endGame, 500);
+  showToast(entry.def.emoji+' '+entry.def.name+' +'+entry.def.pts+'pts!');
+  addCaughtIcon(entry.def.emoji);
+  shrinkOut(entry);
+  removePokemon(entry);
+  if(pokeballs<=0)setTimeout(endGame,500);
 }
 
-function throwPokeball(tx, ty) {
-  const ball = document.createElement('div');
-  ball.className = 'pokeball-throw';
-  ball.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="13" fill="#fff" stroke="#333" stroke-width="1"/><path d="M1 14 Q14 14 27 14" stroke="#333" stroke-width="1.5"/><path d="M1 14 A13 13 0 0 1 27 14" fill="#e44" stroke="none"/><circle cx="14" cy="14" r="5" fill="#fff" stroke="#333" stroke-width="1"/><circle cx="14" cy="14" r="2.5" fill="#fff"/></svg>`;
-  const startX = container.offsetWidth / 2;
-  const startY = container.offsetHeight - 40;
-  ball.style.left = startX + 'px';
-  ball.style.top = startY + 'px';
-  const dx = tx - startX, dy = ty - startY;
-  ball.style.setProperty('--tx', dx + 'px');
-  ball.style.setProperty('--ty', dy + 'px');
-  container.appendChild(ball);
-  setTimeout(() => ball.remove(), 520);
+function shrinkOut(entry){
+  let s=1;
+  const iv=setInterval(()=>{
+    s-=0.15;
+    if(s<=0){clearInterval(iv);return;}
+    if(entry.mesh)entry.mesh.scale.setScalar(s);
+  },30);
 }
 
-function addRipple(x, y) {
-  const r = document.createElement('div');
-  r.className = 'catch-effect';
-  r.style.left = x + 'px'; r.style.top = y + 'px';
-  container.appendChild(r);
-  setTimeout(() => r.remove(), 700);
+function throwBall(tx,ty){
+  const b=document.createElement('div');
+  b.className='pball';
+  const sx=W/2,sy=H-40;
+  b.style.left=sx+'px';b.style.top=sy+'px';
+  b.style.setProperty('--tx',(tx-sx)+'px');
+  b.style.setProperty('--ty',(ty-sy)+'px');
+  b.innerHTML=`<svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="12" fill="#fff" stroke="#333" stroke-width="1"/><path d="M1 13 Q13 13 25 13" stroke="#333" stroke-width="1"/><path d="M1 13 A12 12 0 0 1 25 13" fill="#e44"/><circle cx="13" cy="13" r="4.5" fill="#fff" stroke="#333" stroke-width="1"/></svg>`;
+  gc.appendChild(b);
+  setTimeout(()=>b.remove(),520);
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1800);
+function addRipple(x,y){
+  const r=document.createElement('div');
+  r.className='ripple';r.style.left=x+'px';r.style.top=y+'px';
+  gc.appendChild(r);setTimeout(()=>r.remove(),650);
 }
 
-function addCaughtIcon(emoji) {
-  const list = document.getElementById('poke-list');
-  const icon = document.createElement('div');
-  icon.className = 'caught-icon';
-  icon.textContent = emoji;
-  list.appendChild(icon);
-  if (list.children.length > 8) list.removeChild(list.firstChild);
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1900);
 }
 
-function endGame() {
-  if (!gameRunning) return;
-  gameRunning = false;
-  clearInterval(spawnInterval);
-  clearInterval(timerInterval);
-  container.querySelectorAll('.pokemon-sprite').forEach(el => el.remove());
-  document.getElementById('final-score').textContent = score;
-  document.getElementById('final-msg').textContent = 'Bắt được ' + caughtPokemon.length + ' Pokémon';
-  gameOverScreen.style.display = 'flex';
+function addCaughtIcon(emoji){
+  const l=document.getElementById('plist');
+  const i=document.createElement('div');i.className='ci';i.textContent=emoji;
+  l.appendChild(i);
+  if(l.children.length>8)l.removeChild(l.firstChild);
 }
 
-function resetGame() {
-  gameOverScreen.style.display = 'none';
-  document.getElementById('poke-list').innerHTML = '';
-  document.getElementById('toast').classList.remove('show');
-  if (video.srcObject) { startGameAgain(); } else { startGame(); }
+function updateHUD(){
+  document.getElementById('scoreH').textContent='⭐ '+score;
+  document.getElementById('timerH').textContent=timeLeft+'s';
+  document.getElementById('ballH').textContent='🔴 '+pokeballs;
+  if(timeLeft<=10)document.getElementById('timerH').style.background='rgba(220,30,30,.9)';
 }
 
-async function startGameAgain() {
-  score = 0; timeLeft = 60; pokeballs = 10; caughtPokemon = [];
-  gameRunning = true;
+function tick(){
+  if(!gameRunning)return;
+  timeLeft--;updateHUD();
+  if(timeLeft<=0)endGame();
+}
+
+function endGame(){
+  if(!gameRunning)return;
+  gameRunning=false;
+  clearInterval(spawnInt);clearInterval(timerInt);
+  pokemons3d.slice().forEach(p=>removePokemon(p));
+  document.getElementById('fscore').textContent=score;
+  document.getElementById('fmsg').textContent='Bắt được '+caught.length+' Pokémon';
+  document.getElementById('gameOver').style.display='flex';
+}
+
+function resetGame(){
+  document.getElementById('gameOver').style.display='none';
+  document.getElementById('plist').innerHTML='';
+  score=0;timeLeft=60;pokeballs=10;caught=[];
+  gameRunning=true;updateHUD();
+  document.getElementById('timerH').style.background='rgba(200,40,40,.75)';
+  spawnInt=setInterval(spawnPokemon,2200);
+  timerInt=setInterval(tick,1000);
+  setTimeout(spawnPokemon,400);setTimeout(spawnPokemon,1300);
+}
+
+async function startGame(){
+  const err=document.getElementById('camErr');
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});
+    video.srcObject=s;await video.play();
+  }catch(e){
+    try{
+      const s2=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      video.srcObject=s2;await video.play();
+    }catch(e2){err.style.display='block';return;}
+  }
+  document.getElementById('startS').style.display='none';
+  W=gc.offsetWidth;H=gc.offsetHeight;
+  if(!renderer)initThree();
+  else{renderer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();}
+  setupHitDetection();
+  gameRunning=true;score=0;timeLeft=60;pokeballs=10;caught=[];
   updateHUD();
-  document.getElementById('timer-display').style.background = 'rgba(220,50,50,0.7)';
-  spawnInterval = setInterval(spawnPokemon, 2200);
-  timerInterval = setInterval(tick, 1000);
-  setTimeout(spawnPokemon, 400);
-  setTimeout(spawnPokemon, 1200);
+  spawnInt=setInterval(spawnPokemon,2200);
+  timerInt=setInterval(tick,1000);
+  setTimeout(spawnPokemon,300);setTimeout(spawnPokemon,1100);
 }
+
+window.startGame=startGame;
+window.resetGame=resetGame;
+window.addEventListener('resize',()=>{
+  if(!renderer)return;
+  W=gc.offsetWidth;H=gc.offsetHeight;
+  renderer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix();
+});
 </script>
